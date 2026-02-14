@@ -42,16 +42,19 @@ PYTHONPATH=platform/api uvicorn app.main:app --reload
 
 ```bash
 cd /Users/alejandroaucestovar/Desktop/devsecops
+cp .env.example .env
+# fill in strong secrets in .env before starting services
 docker compose up -d postgres neo4j minio minio-init
 source .venv/bin/activate
 export STORAGE_BACKEND=postgres
-export DATABASE_URL='postgresql+psycopg://devsecops:devsecops@localhost:5432/devsecops'
+source .env
+export DATABASE_URL="postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}"
 export NEO4J_URI='bolt://localhost:7687'
 export NEO4J_USER='neo4j'
-export NEO4J_PASSWORD='devsecopsneo'
+export NEO4J_PASSWORD="${NEO4J_PASSWORD}"
 export OBJECT_STORE_ENDPOINT='http://localhost:9000'
-export OBJECT_STORE_ACCESS_KEY='minioadmin'
-export OBJECT_STORE_SECRET_KEY='minioadmin'
+export OBJECT_STORE_ACCESS_KEY="${MINIO_ROOT_USER}"
+export OBJECT_STORE_SECRET_KEY="${MINIO_ROOT_PASSWORD}"
 export OBJECT_STORE_BUCKET='devsecops-evidence'
 PYTHONPATH=platform/api uvicorn app.main:app --reload
 ```
@@ -60,7 +63,7 @@ PYTHONPATH=platform/api uvicorn app.main:app --reload
 
 ```bash
 export AUTH_MODE=jwt
-export AUTH_JWT_SECRET='replace-with-strong-secret'
+export AUTH_JWT_SECRET='<strong-jwt-secret>'
 export AUTH_JWT_ALGORITHM='HS256'
 export AUTH_JWT_ISSUER='devsecops'
 export AUTH_JWT_AUDIENCE='devsecops-api'

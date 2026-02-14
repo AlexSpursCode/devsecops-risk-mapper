@@ -4,7 +4,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-devsecops}
       POSTGRES_USER: ${POSTGRES_USER:-devsecops}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-db-password}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
     ports:
       - "5432:5432"
     volumes:
@@ -14,7 +14,7 @@ services:
   neo4j:
     image: neo4j:5.25
     environment:
-      NEO4J_AUTH: ${NEO4J_AUTH:-neo4j/change-me-neo4j-password}
+      NEO4J_AUTH: ${NEO4J_AUTH:?Set NEO4J_AUTH in .env as neo4j/<password>}
     ports:
       - "7474:7474"
       - "7687:7687"
@@ -26,7 +26,7 @@ services:
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-change-me-minio-password}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in .env}
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -39,7 +39,7 @@ services:
       - minio
     entrypoint: >
       /bin/sh -c "
-      until (/usr/bin/mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-change-me-minio-password}) do echo '...waiting...' && sleep 1; done;
+      until (/usr/bin/mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in .env}) do echo '...waiting...' && sleep 1; done;
       /usr/bin/mc mb local/devsecops-evidence --ignore-existing;
       /usr/bin/mc policy set none local/devsecops-evidence;
       exit 0;
@@ -55,17 +55,17 @@ services:
       - minio
     environment:
       STORAGE_BACKEND: postgres
-      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://devsecops:change-me-db-password@postgres:5432/devsecops}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-devsecops}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-devsecops}
       NEO4J_URI: bolt://neo4j:7687
       NEO4J_USER: neo4j
-      NEO4J_PASSWORD: ${NEO4J_PASSWORD:-change-me-neo4j-password}
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD:?Set NEO4J_PASSWORD in .env}
       OBJECT_STORE_ENDPOINT: http://minio:9000
       OBJECT_STORE_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
-      OBJECT_STORE_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-change-me-minio-password}
+      OBJECT_STORE_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in .env}
       OBJECT_STORE_BUCKET: devsecops-evidence
       AUTH_MODE: ${AUTH_MODE:-jwt}
       AUTH_ALLOW_INSECURE_HEADER: ${AUTH_ALLOW_INSECURE_HEADER:-false}
-      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-replace-with-strong-secret}
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:?Set AUTH_JWT_SECRET in .env}
       AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER:-devsecops}
       AUTH_JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE:-devsecops-api}
       METRICS_PUBLIC: ${METRICS_PUBLIC:-false}
