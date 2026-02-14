@@ -63,7 +63,8 @@ PYTHONPATH=platform/api uvicorn app.main:app --reload
 
 ```bash
 export AUTH_MODE=jwt
-export AUTH_JWT_SECRET='<strong-jwt-secret>'
+source .env
+export AUTH_JWT_SECRET="${AUTH_JWT_SECRET}"
 export AUTH_JWT_ALGORITHM='HS256'
 export AUTH_JWT_ISSUER='devsecops'
 export AUTH_JWT_AUDIENCE='devsecops-api'
@@ -75,6 +76,8 @@ JWT payload must include `role` with one of:
 Security default:
 - Header auth is disabled unless `AUTH_ALLOW_INSECURE_HEADER=true`.
 - `/metrics` is protected unless `METRICS_PUBLIC=true`.
+- Sensitive values can be supplied from files using `*_FILE` env vars
+  (for example `AUTH_JWT_SECRET_FILE`, `NEO4J_PASSWORD_FILE`, `OBJECT_STORE_SECRET_KEY_FILE`).
 
 ## Async Job Endpoints
 
