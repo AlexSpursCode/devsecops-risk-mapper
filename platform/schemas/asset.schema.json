@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://devsecops.local/schemas/asset.schema.json",
+  "title": "Asset",
+  "type": "object",
+  "required": ["repo", "service", "owner", "environment", "criticality", "data_classification"],
+  "properties": {
+    "repo": {"type": "string"},
+    "service": {"type": "string"},
+    "owner": {"type": "string"},
+    "environment": {"type": "string"},
+    "criticality": {"enum": ["tier0", "tier1", "tier2", "tier3"]},
+    "data_classification": {"enum": ["public", "internal", "confidential", "restricted"]}
+  },
+  "additionalProperties": false
+}

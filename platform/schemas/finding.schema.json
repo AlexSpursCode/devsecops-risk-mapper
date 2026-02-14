@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://devsecops.local/schemas/finding.schema.json",
+  "title": "Finding",
+  "type": "object",
+  "required": ["id", "source", "type", "severity", "asset", "evidence_uri", "first_seen", "last_seen", "status"],
+  "properties": {
+    "id": {"type": "string"},
+    "source": {"type": "string"},
+    "type": {"type": "string"},
+    "severity": {"enum": ["critical", "high", "medium", "low", "info"]},
+    "asset": {"$ref": "asset.schema.json"},
+    "evidence_uri": {"type": "string", "format": "uri"},
+    "first_seen": {"type": "string", "format": "date-time"},
+    "last_seen": {"type": "string", "format": "date-time"},
+    "status": {"enum": ["open", "accepted_risk", "resolved"]},
+    "exploitability": {"type": "number", "minimum": 0, "maximum": 1},
+    "compensating_controls": {"type": "number", "minimum": 0, "maximum": 100}
+  },
+  "additionalProperties": false
+}

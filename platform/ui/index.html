@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>DevSecOps Risk Mapper</title>
+    <style>
+      :root {
+        --bg: #f4f7f8;
+        --card: #ffffff;
+        --ink: #14212b;
+        --accent: #0b6e4f;
+        --warn: #b15a00;
+        --muted: #6b7785;
+      }
+      body {
+        margin: 0;
+        font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+        background: radial-gradient(circle at top right, #dbf0e6, transparent 40%), var(--bg);
+        color: var(--ink);
+      }
+      .wrap {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 14px;
+      }
+      .card {
+        background: var(--card);
+        border-radius: 12px;
+        padding: 14px;
+        box-shadow: 0 6px 20px rgba(20, 33, 43, 0.08);
+      }
+      .title { font-size: 12px; color: var(--muted); text-transform: uppercase; }
+      .value { font-size: 24px; font-weight: 700; }
+      button {
+        background: var(--accent);
+        color: white;
+        border: 0;
+        border-radius: 8px;
+        padding: 8px 12px;
+        cursor: pointer;
+      }
+      input { padding: 8px; border-radius: 8px; border: 1px solid #ccd5dd; }
+      pre {
+        background: #0f1c24;
+        color: #d7f7e8;
+        border-radius: 8px;
+        padding: 12px;
+        overflow: auto;
+        max-height: 320px;
+      }
+      .warn { color: var(--warn); font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>DevSecOps Visual Risk Mapper</h1>
+      <p>Quick operational dashboard for risk, compliance, and async job monitoring.</p>
+
+      <div class="grid">
+        <div class="card"><div class="title">Health</div><div id="health" class="value">-</div></div>
+        <div class="card"><div class="title">Latest Decision</div><div id="decision" class="value">-</div></div>
+        <div class="card"><div class="title">Latest Score</div><div id="score" class="value">-</div></div>
+      </div>
+
+      <div class="card" style="margin-top:14px;">
+        <div class="title">Lookup Release</div>
+        <input id="releaseId" value="rel-101" />
+        <button id="loadRelease">Load</button>
+        <pre id="releaseOut"></pre>
+      </div>
+
+      <div class="card" style="margin-top:14px;">
+        <div class="title">Lookup Job</div>
+        <input id="jobId" placeholder="job uuid" />
+        <button id="loadJob">Load Job</button>
+        <span class="warn">Use /api/v1/jobs/scanner/batch to enqueue jobs.</span>
+        <pre id="jobOut"></pre>
+      </div>
+    </div>
+    <script src="./main.js"></script>
+  </body>
+</html>

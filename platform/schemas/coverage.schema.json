@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://devsecops.local/schemas/coverage.schema.json",
+  "title": "Coverage",
+  "type": "object",
+  "required": ["release_id", "control_id", "covered", "evidence_uri", "confidence"],
+  "properties": {
+    "release_id": {"type": "string"},
+    "control_id": {"type": "string"},
+    "covered": {"type": "boolean"},
+    "evidence_uri": {"type": "string", "format": "uri"},
+    "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+  },
+  "additionalProperties": false
+}

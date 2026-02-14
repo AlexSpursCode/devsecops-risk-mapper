@@ -1,0 +1,72 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: devsecops
+      POSTGRES_USER: devsecops
+      POSTGRES_PASSWORD: devsecops
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./platform/infra/sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+  neo4j:
+    image: neo4j:5.25
+    environment:
+      NEO4J_AUTH: neo4j/devsecopsneo
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - neo4j_data:/data
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until (/usr/bin/mc alias set local http://minio:9000 minioadmin minioadmin) do echo '...waiting...' && sleep 1; done;
+      /usr/bin/mc mb local/devsecops-evidence --ignore-existing;
+      /usr/bin/mc policy set none local/devsecops-evidence;
+      exit 0;
+      "
+
+  api:
+    build:
+      context: .
+      dockerfile: platform/api/Dockerfile
+    depends_on:
+      - postgres
+      - neo4j
+      - minio
+    environment:
+      STORAGE_BACKEND: postgres
+      DATABASE_URL: postgresql+psycopg://devsecops:devsecops@postgres:5432/devsecops
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_USER: neo4j
+      NEO4J_PASSWORD: devsecopsneo
+      OBJECT_STORE_ENDPOINT: http://minio:9000
+      OBJECT_STORE_ACCESS_KEY: minioadmin
+      OBJECT_STORE_SECRET_KEY: minioadmin
+      OBJECT_STORE_BUCKET: devsecops-evidence
+    ports:
+      - "8000:8000"
+
+volumes:
+  postgres_data:
+  neo4j_data:
+  minio_data:

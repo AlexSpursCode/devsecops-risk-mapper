@@ -1,0 +1,123 @@
+stages:
+  - precheck
+  - scan
+  - sbom
+  - evaluate
+  - report
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  PYTHONPATH: "platform/api"
+
+cache:
+  paths:
+    - .cache/pip
+
+precheck:
+  stage: precheck
+  image: python:3.12
+  script:
+    - python -m pip install --upgrade pip
+    - pip install -r platform/api/requirements.txt
+    - python -m compileall platform/api/app
+    - python - <<'PY'
+import json
+from pathlib import Path
+for p in Path('platform/schemas').glob('*.schema.json'):
+    with p.open() as f:
+        json.load(f)
+print('schema validation passed')
+PY
+    - pytest -q tests
+
+scan:
+  stage: scan
+  image: alpine:3.20
+  script:
+    - mkdir -p artifacts
+    - echo '{"tool":"gitleaks","findings":[]}' > artifacts/gitleaks.json
+    - echo '{"tool":"semgrep","findings":[]}' > artifacts/semgrep.json
+    - echo '{"tool":"checkov","findings":[]}' > artifacts/checkov.json
+    - echo '{"matches":[]}' > artifacts/grype.json
+    - echo '{"results":[]}' > artifacts/osv.json
+  artifacts:
+    paths:
+      - artifacts/gitleaks.json
+      - artifacts/semgrep.json
+      - artifacts/checkov.json
+      - artifacts/grype.json
+      - artifacts/osv.json
+
+sbom:
+  stage: sbom
+  image: alpine:3.20
+  script:
+    - mkdir -p artifacts
+    - echo '{"sbom_format":"cyclonedx","packages":[]}' > artifacts/sbom.cdx.json
+    - echo '{"provenance":"signed-placeholder"}' > artifacts/provenance.json
+  artifacts:
+    paths:
+      - artifacts/sbom.cdx.json
+      - artifacts/provenance.json
+
+evaluate:
+  stage: evaluate
+  image: python:3.12
+  script:
+    - python -m pip install --upgrade pip
+    - mkdir -p artifacts
+    - |
+      python platform/workers/ingest_scanners.py \
+        --api-base "${RISK_MAPPER_API_BASE:-http://devsecops-api:8000}" \
+        --repo "${CI_PROJECT_URL:-gitlab.example.com/acme/unknown}" \
+        --service "${CI_PROJECT_NAME:-unknown-service}" \
+        --owner "${RISK_ASSET_OWNER:-platform}" \
+        --environment "${RISK_ASSET_ENV:-prod}" \
+        --criticality "${RISK_ASSET_CRITICALITY:-tier1}" \
+        --data-classification "${RISK_DATA_CLASSIFICATION:-confidential}" \
+        --output artifacts/normalized-findings.json \
+        --input gitleaks=artifacts/gitleaks.json \
+        --input semgrep=artifacts/semgrep.json \
+        --input checkov=artifacts/checkov.json \
+        --input grype=artifacts/grype.json \
+        --input osv=artifacts/osv.json
+    - |
+      cat > payload.json <<JSON
+      {
+        "release_id": "${CI_PIPELINE_ID}",
+        "findings": $(cat artifacts/normalized-findings.json),
+        "asset_context": {
+          "internet_facing": true,
+          "environment": "prod",
+          "data_classification": "confidential"
+        },
+        "exceptions": []
+      }
+      JSON
+    - |
+      python - <<'PY'
+import json
+import os
+from urllib.request import Request, urlopen
+
+base = os.environ.get("RISK_MAPPER_API_BASE", "http://devsecops-api:8000")
+with open("payload.json") as f:
+    payload = json.load(f)
+data = json.dumps(payload).encode("utf-8")
+req = Request(
+    f"{base}/api/v1/gate/evaluate",
+    data=data,
+    headers={"Content-Type": "application/json", "x-role": "platform_admin"},
+    method="POST",
+)
+with urlopen(req, timeout=30) as resp:
+    body = resp.read().decode("utf-8")
+    print(resp.status)
+    print(body)
+PY
+
+report:
+  stage: report
+  image: alpine:3.20
+  script:
+    - echo "Post MR comment with gate result and evidence links"

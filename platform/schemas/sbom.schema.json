@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://devsecops.local/schemas/sbom.schema.json",
+  "title": "SbomDocument",
+  "type": "object",
+  "required": ["release_id", "format", "artifact_uri", "packages"],
+  "properties": {
+    "release_id": {"type": "string"},
+    "format": {"enum": ["cyclonedx", "spdx"]},
+    "artifact_uri": {"type": "string", "format": "uri"},
+    "packages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "version", "ecosystem"],
+        "properties": {
+          "name": {"type": "string"},
+          "version": {"type": "string"},
+          "ecosystem": {"enum": ["npm", "pypi", "maven", "container", "other"]}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

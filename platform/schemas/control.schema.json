@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://devsecops.local/schemas/control.schema.json",
+  "title": "Control",
+  "type": "object",
+  "required": ["control_id", "framework", "objective", "automated_checks", "required_evidence", "coverage_rules"],
+  "properties": {
+    "control_id": {"type": "string"},
+    "framework": {"enum": ["SAMM", "CISA"]},
+    "objective": {"type": "string"},
+    "automated_checks": {"type": "array", "items": {"type": "string"}},
+    "required_evidence": {"type": "array", "items": {"type": "string"}},
+    "coverage_rules": {"type": "string"}
+  },
+  "additionalProperties": false
+}

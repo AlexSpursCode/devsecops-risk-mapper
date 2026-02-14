@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://devsecops.local/schemas/gate-decision.schema.json",
+  "title": "GateDecision",
+  "type": "object",
+  "required": ["result", "score", "reasons", "evidence", "policy_version"],
+  "properties": {
+    "result": {"enum": ["pass", "warn", "block"]},
+    "score": {"type": "number", "minimum": 0, "maximum": 100},
+    "reasons": {"type": "array", "items": {"type": "string"}},
+    "evidence": {"type": "array", "items": {"type": "string", "format": "uri"}},
+    "policy_version": {"type": "string"}
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://devsecops.local/schemas/risk-edge.schema.json",
+  "title": "RiskEdge",
+  "type": "object",
+  "required": ["source", "target", "relation"],
+  "properties": {
+    "source": {"type": "string"},
+    "target": {"type": "string"},
+    "relation": {"type": "string"}
+  },
+  "additionalProperties": false
+}

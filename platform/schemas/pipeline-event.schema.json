@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://devsecops.local/schemas/pipeline-event.schema.json",
+  "title": "PipelineEvent",
+  "type": "object",
+  "required": ["repo", "commit_sha", "pipeline_id", "branch", "artifacts", "timestamp"],
+  "properties": {
+    "repo": {"type": "string"},
+    "commit_sha": {"type": "string"},
+    "pipeline_id": {"type": "string"},
+    "mr_id": {"type": ["string", "null"]},
+    "branch": {"type": "string"},
+    "artifacts": {"type": "array", "items": {"type": "string"}},
+    "timestamp": {"type": "string", "format": "date-time"}
+  },
+  "additionalProperties": false
+}

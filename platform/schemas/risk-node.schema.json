@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://devsecops.local/schemas/risk-node.schema.json",
+  "title": "RiskNode",
+  "type": "object",
+  "required": ["id", "node_type", "label", "risk_score"],
+  "properties": {
+    "id": {"type": "string"},
+    "node_type": {"enum": ["service", "data_store", "control", "finding", "threat"]},
+    "label": {"type": "string"},
+    "risk_score": {"type": "number", "minimum": 0, "maximum": 100}
+  },
+  "additionalProperties": false
+}

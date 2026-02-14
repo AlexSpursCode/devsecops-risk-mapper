@@ -1,0 +1,35 @@
+controls:
+  - control_id: SAMM-GOV-01
+    framework: SAMM
+    objective: Establish security governance and measurable policy ownership.
+    automated_checks: ["policy_artifact_exists", "role_matrix_defined"]
+    required_evidence: ["policy_documents", "rbac_export"]
+    coverage_rules: "covered if governance policy and role mapping are present"
+
+  - control_id: SAMM-DES-01
+    framework: SAMM
+    objective: Perform architecture threat assessment with DFD coverage.
+    automated_checks: ["model_generated", "trust_boundary_present"]
+    required_evidence: ["threat_model_snapshot", "dfd_snapshot"]
+    coverage_rules: "covered if model generation succeeds and graph has service/data nodes"
+
+  - control_id: SAMM-VER-01
+    framework: SAMM
+    objective: Verify security controls in CI via automated scans.
+    automated_checks: ["scan_stage_completed", "gate_decision_generated"]
+    required_evidence: ["scanner_outputs", "gate_decision_record"]
+    coverage_rules: "covered if scan artifacts and gate decision exist"
+
+  - control_id: CISA-SBD-01
+    framework: CISA
+    objective: Enforce secure-by-default pipeline guardrails.
+    automated_checks: ["gate_evaluated", "reason_codes_present"]
+    required_evidence: ["gate_decision_record"]
+    coverage_rules: "covered if gate decision has result, score, and reason codes"
+
+  - control_id: CISA-SBD-02
+    framework: CISA
+    objective: Generate and validate SBOM for each release.
+    automated_checks: ["sbom_present", "sbom_ingested"]
+    required_evidence: ["sbom_artifact", "sbom_ingest_record"]
+    coverage_rules: "covered if cyclonedx/spdx document is ingested for release"
