@@ -7,7 +7,17 @@ import os
 import sys
 from pathlib import Path
 from urllib.error import HTTPError, URLError
+from urllib.parse import urlparse
 from urllib.request import Request, urlopen
+
+
+def validate_api_base(url: str) -> str:
+    parsed = urlparse(url)
+    if parsed.scheme not in {"http", "https"}:
+        raise ValueError("api-base must use http or https")
+    if not parsed.netloc:
+        raise ValueError("api-base must include a valid host")
+    return url.rstrip("/")
 
 
 def post_json(url: str, payload: dict, role: str | None, bearer_token: str | None) -> dict:
@@ -24,7 +34,7 @@ def post_json(url: str, payload: dict, role: str | None, bearer_token: str | Non
         headers=headers,
         method="POST",
     )
-    with urlopen(req, timeout=30) as resp:
+    with urlopen(req, timeout=30) as resp:  # nosec B310
         return json.loads(resp.read().decode("utf-8"))
 
 
@@ -52,6 +62,7 @@ def main() -> int:
         help="tool=path pair; supported tools: gitleaks, semgrep, checkov, grype, osv",
     )
     args = parser.parse_args()
+    api_base = validate_api_base(args.api_base)
 
     asset = {
         "repo": args.repo,
@@ -79,7 +90,7 @@ def main() -> int:
             "report": report,
             "evidence_uri": f"file://{path.resolve()}",
         }
-        endpoint = f"{args.api_base.rstrip('/')}/api/v1/ingest/scanner/report"
+        endpoint = f"{api_base}/api/v1/ingest/scanner/report"
         try:
             response = post_json(endpoint, payload, args.role, args.bearer_token)
         except (HTTPError, URLError) as exc:
