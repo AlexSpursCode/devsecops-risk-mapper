@@ -2,92 +2,130 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>DevSecOps Risk Mapper</title>
-    <style>
-      :root {
-        --bg: #f4f7f8;
-        --card: #ffffff;
-        --ink: #14212b;
-        --accent: #0b6e4f;
-        --warn: #b15a00;
-        --muted: #6b7785;
-      }
-      body {
-        margin: 0;
-        font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
-        background: radial-gradient(circle at top right, #dbf0e6, transparent 40%), var(--bg);
-        color: var(--ink);
-      }
-      .wrap {
-        max-width: 1100px;
-        margin: 0 auto;
-        padding: 24px;
-      }
-      .grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-        gap: 14px;
-      }
-      .card {
-        background: var(--card);
-        border-radius: 12px;
-        padding: 14px;
-        box-shadow: 0 6px 20px rgba(20, 33, 43, 0.08);
-      }
-      .title { font-size: 12px; color: var(--muted); text-transform: uppercase; }
-      .value { font-size: 24px; font-weight: 700; }
-      button {
-        background: var(--accent);
-        color: white;
-        border: 0;
-        border-radius: 8px;
-        padding: 8px 12px;
-        cursor: pointer;
-      }
-      input { padding: 8px; border-radius: 8px; border: 1px solid #ccd5dd; }
-      pre {
-        background: #0f1c24;
-        color: #d7f7e8;
-        border-radius: 8px;
-        padding: 12px;
-        overflow: auto;
-        max-height: 320px;
-      }
-      .warn { color: var(--warn); font-weight: 600; }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DevSecOps Risk Mapper Console</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <div class="wrap">
-      <h1>DevSecOps Visual Risk Mapper</h1>
-      <p>Quick operational dashboard for risk, compliance, and async job monitoring.</p>
+    <div class="background-glow"></div>
+    <div class="app-shell">
+      <aside class="left-rail card">
+        <h1>Risk Mapper</h1>
+        <p class="muted">Operations console for release risk, control coverage, and architecture graph review.</p>
 
-      <div class="grid">
-        <div class="card"><div class="title">Health</div><div id="health" class="value">-</div></div>
-        <div class="card"><div class="title">Latest Decision</div><div id="decision" class="value">-</div></div>
-        <div class="card"><div class="title">Latest Score</div><div id="score" class="value">-</div></div>
-      </div>
+        <div class="field-group">
+          <label>Bearer Token</label>
+          <textarea id="authToken" rows="3" placeholder="Paste JWT bearer token"></textarea>
+        </div>
 
-      <div class="card" style="margin-top:14px;">
-        <div class="title">Auth</div>
-        <input id="authToken" placeholder="Bearer token (preferred)" style="width:60%" />
-        <input id="devRole" placeholder="dev role (header mode only)" value="dev_lead" />
-      </div>
+        <div class="field-group">
+          <label>Dev Role (header fallback)</label>
+          <input id="devRole" value="dev_lead" />
+        </div>
 
-      <div class="card" style="margin-top:14px;">
-        <div class="title">Lookup Release</div>
-        <input id="releaseId" value="rel-101" />
-        <button id="loadRelease">Load</button>
-        <pre id="releaseOut"></pre>
-      </div>
+        <div class="field-group two-col">
+          <div>
+            <label>Release ID</label>
+            <input id="releaseId" value="rel-101" />
+          </div>
+          <div>
+            <label>Service ID</label>
+            <input id="serviceId" value="payments" />
+          </div>
+        </div>
 
-      <div class="card" style="margin-top:14px;">
-        <div class="title">Lookup Job</div>
-        <input id="jobId" placeholder="job uuid" />
-        <button id="loadJob">Load Job</button>
-        <span class="warn">Use /api/v1/jobs/scanner/batch to enqueue jobs.</span>
-        <pre id="jobOut"></pre>
-      </div>
+        <div class="button-row">
+          <button id="loadRelease">Load Release</button>
+          <button id="refreshGraph" class="ghost">Refresh Graph</button>
+        </div>
+
+        <div class="field-group two-col">
+          <div>
+            <label>Job ID</label>
+            <input id="jobId" placeholder="uuid" />
+          </div>
+          <div class="job-action">
+            <button id="loadJob" class="ghost">Load Job</button>
+          </div>
+        </div>
+
+        <div id="statusBanner" class="status-banner">Ready</div>
+      </aside>
+
+      <main class="main-content">
+        <section class="kpi-row">
+          <article class="card kpi">
+            <span class="kpi-label">Health</span>
+            <span id="kpiHealth" class="kpi-value">-</span>
+          </article>
+          <article class="card kpi">
+            <span class="kpi-label">Decision</span>
+            <span id="kpiDecision" class="kpi-value">-</span>
+          </article>
+          <article class="card kpi">
+            <span class="kpi-label">Risk Score</span>
+            <span id="kpiScore" class="kpi-value">-</span>
+          </article>
+          <article class="card kpi">
+            <span class="kpi-label">Findings</span>
+            <span id="kpiFindings" class="kpi-value">-</span>
+          </article>
+        </section>
+
+        <section class="panel-grid">
+          <article class="card panel">
+            <div class="panel-head">
+              <h2>Compliance Coverage</h2>
+            </div>
+            <div id="coveragePanel" class="coverage-panel"></div>
+          </article>
+
+          <article class="card panel">
+            <div class="panel-head">
+              <h2>Release Findings</h2>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Source</th>
+                    <th>Severity</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="findingsTableBody"></tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <section class="card panel graph-panel">
+          <div class="panel-head">
+            <h2>Architecture Threat Graph</h2>
+            <div class="legend" id="legend"></div>
+          </div>
+          <svg id="graphCanvas" viewBox="0 0 900 430" role="img" aria-label="risk graph"></svg>
+        </section>
+
+        <section class="panel-grid">
+          <article class="card panel">
+            <div class="panel-head">
+              <h2>Job Status</h2>
+            </div>
+            <pre id="jobOut">{}</pre>
+          </article>
+          <article class="card panel">
+            <div class="panel-head">
+              <h2>Raw Release Snapshot</h2>
+            </div>
+            <pre id="releaseOut">{}</pre>
+          </article>
+        </section>
+      </main>
     </div>
     <script src="./main.js"></script>
   </body>
