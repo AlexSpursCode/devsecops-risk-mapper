@@ -237,7 +237,12 @@ def ingest_sbom(sbom: SbomDocument, _=Depends(permission_dependency("ingest"))) 
 
 @app.post("/api/v1/model/generate", response_model=ModelGenerateResponse)
 def model_generate(payload: ModelGenerateRequest, _=Depends(permission_dependency("model"))) -> ModelGenerateResponse:
-    model = generate_model_graph(payload.repo, payload.commit_sha)
+    model = generate_model_graph(
+        repo=payload.repo,
+        commit_sha=payload.commit_sha,
+        repo_path=payload.repo_path,
+        max_files=payload.max_files,
+    )
     service_id = payload.repo.split("/")[-1].replace(".git", "")
     store.upsert_graph(service_id, model.nodes, model.edges)
     return model

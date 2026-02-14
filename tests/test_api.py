@@ -302,3 +302,74 @@ def test_metrics_endpoint() -> None:
     res = client.get("/metrics", headers=headers("auditor"))
     assert res.status_code == 200
     assert "devsecops_api_requests_total" in res.text
+
+
+def test_model_extraction_from_real_iac(tmp_path) -> None:
+    compose = tmp_path / "docker-compose.yml"
+    compose.write_text(
+        """
+services:
+  api:
+    image: ghcr.io/acme/api:latest
+    depends_on:
+      - redis
+    environment:
+      - DB_HOST=postgres
+      - REDIS_HOST=redis
+  redis:
+    image: redis:7
+"""
+    )
+    k8s = tmp_path / "deployment.yaml"
+    k8s.write_text(
+        """
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payments
+spec:
+  template:
+    spec:
+      containers:
+        - name: payments
+          image: acme/payments:1.0
+          env:
+            - name: DATABASE_URL
+              value: postgresql://db
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payments
+spec:
+  type: LoadBalancer
+"""
+    )
+    tf = tmp_path / "main.tf"
+    tf.write_text(
+        """
+resource "aws_s3_bucket" "evidence" {}
+resource "aws_db_instance" "primary" {}
+"""
+    )
+
+    payload = {
+        "repo": "gitlab.example.com/acme/payments.git",
+        "commit_sha": "abcdef1234567890",
+        "repo_path": str(tmp_path),
+        "max_files": 100,
+    }
+    model = client.post("/api/v1/model/generate", json=payload, headers=headers("security_architect"))
+    assert model.status_code == 200
+    body = model.json()
+
+    node_ids = {n["id"] for n in body["nodes"]}
+    edge_triplets = {(e["source"], e["target"], e["relation"]) for e in body["edges"]}
+
+    assert "service:api" in node_ids
+    assert "service:payments" in node_ids
+    assert any(n.startswith("data_store:database") or n.startswith("data_store:rds") for n in node_ids)
+    assert any(n.startswith("data_store:redis") for n in node_ids)
+    assert any(n.startswith("data_store:s3-evidence") for n in node_ids)
+    assert ("service:api", "service:redis", "calls") in edge_triplets
+    assert any(rel == "mitigates" for _, _, rel in edge_triplets)

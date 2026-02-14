@@ -175,6 +175,8 @@ class GateDecision(BaseModel):
 class ModelGenerateRequest(BaseModel):
     repo: str
     commit_sha: str
+    repo_path: str | None = None
+    max_files: int = Field(default=500, ge=1, le=5000)
 
 
 class ModelGenerateResponse(BaseModel):
