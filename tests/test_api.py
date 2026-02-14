@@ -1,16 +1,28 @@
 import time
 from datetime import datetime, timedelta, timezone
 
+import jwt
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.config import settings
 
 
 client = TestClient(app)
 
 
 def headers(role: str = "platform_admin") -> dict[str, str]:
-    return {"x-role": role}
+    now = datetime.now(tz=timezone.utc)
+    payload = {
+        "role": role,
+        "iss": settings.auth_jwt_issuer,
+        "aud": settings.auth_jwt_audience,
+        "iat": int(now.timestamp()),
+        "nbf": int(now.timestamp()),
+        "exp": int((now + timedelta(minutes=30)).timestamp()),
+    }
+    token = jwt.encode(payload, settings.auth_jwt_secret, algorithm=settings.auth_jwt_algorithm)
+    return {"Authorization": f"Bearer {token}"}
 
 
 def base_finding(fid: str = "F-1", severity: str = "critical") -> dict:
@@ -287,6 +299,6 @@ def test_async_scanner_batch_job() -> None:
 
 
 def test_metrics_endpoint() -> None:
-    res = client.get("/metrics")
+    res = client.get("/metrics", headers=headers("auditor"))
     assert res.status_code == 200
     assert "devsecops_api_requests_total" in res.text

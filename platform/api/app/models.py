@@ -123,6 +123,8 @@ class JobStatusResponse(BaseModel):
     idempotency_key: str | None = None
     result: dict[str, Any] | None = None
     error: str | None = None
+    created_at: datetime | None = None
+    finished_at: datetime | None = None
 
 
 class PipelineEvent(BaseModel):
@@ -150,7 +152,7 @@ class RiskException(BaseModel):
 
 class AsyncScannerBatchRequest(BaseModel):
     release_id: str
-    reports: list[ScannerReportRequest]
+    reports: list[ScannerReportRequest] = Field(min_length=1, max_length=50)
     asset_context: AssetContext
     exceptions: list[RiskException] = []
 

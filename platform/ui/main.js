@@ -1,5 +1,17 @@
+function buildHeaders() {
+  const headers = {};
+  const token = document.getElementById("authToken").value.trim();
+  const role = document.getElementById("devRole").value.trim();
+  if (token) {
+    headers.Authorization = token.toLowerCase().startsWith("bearer ") ? token : `Bearer ${token}`;
+  } else if (role) {
+    headers["x-role"] = role;
+  }
+  return headers;
+}
+
 async function getJson(path) {
-  const response = await fetch(path, { headers: { "x-role": "platform_admin" } });
+  const response = await fetch(path, { headers: buildHeaders() });
   return response.json();
 }
 

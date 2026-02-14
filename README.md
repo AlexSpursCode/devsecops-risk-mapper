@@ -62,10 +62,16 @@ PYTHONPATH=platform/api uvicorn app.main:app --reload
 export AUTH_MODE=jwt
 export AUTH_JWT_SECRET='replace-with-strong-secret'
 export AUTH_JWT_ALGORITHM='HS256'
+export AUTH_JWT_ISSUER='devsecops'
+export AUTH_JWT_AUDIENCE='devsecops-api'
 ```
 
 JWT payload must include `role` with one of:
 `security_architect`, `appsec_engineer`, `dev_lead`, `auditor`, `platform_admin`.
+
+Security default:
+- Header auth is disabled unless `AUTH_ALLOW_INSECURE_HEADER=true`.
+- `/metrics` is protected unless `METRICS_PUBLIC=true`.
 
 ## Async Job Endpoints
 
@@ -73,6 +79,11 @@ JWT payload must include `role` with one of:
 - `GET /api/v1/jobs/{job_id}`
 
 Provide `Idempotency-Key` header to deduplicate retried submissions.
+Queue safety limits are configurable with:
+- `MAX_JOB_QUEUE_SIZE`
+- `MAX_REPORTS_PER_JOB`
+- `MAX_REPORT_BYTES`
+- `JOB_RETENTION_SECONDS`
 
 ## Metrics
 

@@ -10,12 +10,18 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 
-def post_json(url: str, payload: dict, role: str) -> dict:
+def post_json(url: str, payload: dict, role: str | None, bearer_token: str | None) -> dict:
     data = json.dumps(payload).encode("utf-8")
+    headers = {"Content-Type": "application/json"}
+    if bearer_token:
+        token = bearer_token if bearer_token.lower().startswith("bearer ") else f"Bearer {bearer_token}"
+        headers["Authorization"] = token
+    elif role:
+        headers["x-role"] = role
     req = Request(
         url,
         data=data,
-        headers={"Content-Type": "application/json", "x-role": role},
+        headers=headers,
         method="POST",
     )
     with urlopen(req, timeout=30) as resp:
@@ -30,7 +36,8 @@ def load_json(path: Path) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Ingest scanner artifacts via DevSecOps API and emit normalized findings.")
     parser.add_argument("--api-base", required=True)
-    parser.add_argument("--role", default="platform_admin")
+    parser.add_argument("--role", default="appsec_engineer")
+    parser.add_argument("--bearer-token", default=os.getenv("RISK_MAPPER_BEARER_TOKEN"))
     parser.add_argument("--repo", required=True)
     parser.add_argument("--service", required=True)
     parser.add_argument("--owner", required=True)
@@ -74,7 +81,7 @@ def main() -> int:
         }
         endpoint = f"{args.api_base.rstrip('/')}/api/v1/ingest/scanner/report"
         try:
-            response = post_json(endpoint, payload, args.role)
+            response = post_json(endpoint, payload, args.role, args.bearer_token)
         except (HTTPError, URLError) as exc:
             print(f"failed ingest for tool={tool}: {exc}", file=sys.stderr)
             return 1

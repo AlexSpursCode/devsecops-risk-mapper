@@ -69,6 +69,7 @@ evaluate:
     - |
       python platform/workers/ingest_scanners.py \
         --api-base "${RISK_MAPPER_API_BASE:-http://devsecops-api:8000}" \
+        --bearer-token "${RISK_MAPPER_BEARER_TOKEN:-}" \
         --repo "${CI_PROJECT_URL:-gitlab.example.com/acme/unknown}" \
         --service "${CI_PROJECT_NAME:-unknown-service}" \
         --owner "${RISK_ASSET_OWNER:-platform}" \
@@ -101,13 +102,17 @@ import os
 from urllib.request import Request, urlopen
 
 base = os.environ.get("RISK_MAPPER_API_BASE", "http://devsecops-api:8000")
+token = os.environ.get("RISK_MAPPER_BEARER_TOKEN", "").strip()
 with open("payload.json") as f:
     payload = json.load(f)
 data = json.dumps(payload).encode("utf-8")
+headers = {"Content-Type": "application/json", "x-role": "appsec_engineer"}
+if token:
+    headers = {"Content-Type": "application/json", "Authorization": token if token.lower().startswith("bearer ") else f"Bearer {token}"}
 req = Request(
     f"{base}/api/v1/gate/evaluate",
     data=data,
-    headers={"Content-Type": "application/json", "x-role": "platform_admin"},
+    headers=headers,
     method="POST",
 )
 with urlopen(req, timeout=30) as resp:

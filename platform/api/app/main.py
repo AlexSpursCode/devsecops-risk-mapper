@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, Header
+from fastapi import Depends, FastAPI, Header, HTTPException, status
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -57,7 +59,7 @@ def root() -> RedirectResponse:
 
 
 @app.get("/metrics")
-def metrics():
+def metrics(_=Depends(permission_dependency("read")) if not settings.metrics_public else None):
     return metrics_response()
 
 
@@ -81,12 +83,23 @@ def ingest_findings(findings: list[Finding], _=Depends(permission_dependency("in
 def _maybe_store_evidence(tool: str, report: dict, evidence_uri: str) -> str:
     if evidence_store is None:
         return evidence_uri
-    key = f"scanner-reports/{tool}/{abs(hash(evidence_uri))}.json"
+    digest = hashlib.sha256(evidence_uri.encode("utf-8")).hexdigest()
+    key = f"scanner-reports/{tool}/{digest}.json"
     return evidence_store.put_json(key=key, payload=report)
+
+
+def _validate_report_size(report: dict) -> None:
+    raw = json.dumps(report).encode("utf-8")
+    if len(raw) > settings.max_report_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"scanner report exceeds max size {settings.max_report_bytes} bytes",
+        )
 
 
 @app.post("/api/v1/ingest/scanner/report", response_model=ScannerIngestResponse)
 def ingest_scanner_report(payload: ScannerReportRequest, _=Depends(permission_dependency("ingest"))) -> ScannerIngestResponse:
+    _validate_report_size(payload.report)
     evidence_uri = _maybe_store_evidence(payload.tool, payload.report, payload.evidence_uri)
     findings = parse_report(
         tool=payload.tool,
@@ -101,9 +114,15 @@ def ingest_scanner_report(payload: ScannerReportRequest, _=Depends(permission_de
 
 @app.post("/api/v1/ingest/scanner/batch", response_model=ScannerBatchIngestResponse)
 def ingest_scanner_batch(payload: ScannerBatchRequest, _=Depends(permission_dependency("ingest"))) -> ScannerBatchIngestResponse:
+    if len(payload.reports) > settings.max_reports_per_job:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"too many reports: max {settings.max_reports_per_job}",
+        )
     all_findings: list[Finding] = []
     by_tool: dict[str, int] = {}
     for report in payload.reports:
+        _validate_report_size(report.report)
         evidence_uri = _maybe_store_evidence(report.tool, report.report, report.evidence_uri)
         findings = parse_report(
             tool=report.tool,
@@ -120,10 +139,13 @@ def ingest_scanner_batch(payload: ScannerBatchRequest, _=Depends(permission_depe
 
 def _worker_async_scanner_batch(payload: dict) -> dict:
     request = AsyncScannerBatchRequest.model_validate(payload)
+    if len(request.reports) > settings.max_reports_per_job:
+        raise ValueError(f"too_many_reports:max={settings.max_reports_per_job}")
     all_findings: list[Finding] = []
     by_tool: dict[str, int] = {}
 
     for report in request.reports:
+        _validate_report_size(report.report)
         evidence_uri = _maybe_store_evidence(report.tool, report.report, report.evidence_uri)
         findings = parse_report(
             tool=report.tool,
@@ -162,12 +184,20 @@ def enqueue_scanner_batch_job(
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     _=Depends(permission_dependency("ingest")),
 ) -> JobStatusResponse:
-    record = job_queue.enqueue(
-        fn_name="scanner_batch_pipeline",
-        payload=payload.model_dump(mode="json"),
-        worker=_worker_async_scanner_batch,
-        idempotency_key=idempotency_key,
-    )
+    if len(payload.reports) > settings.max_reports_per_job:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"too many reports: max {settings.max_reports_per_job}",
+        )
+    try:
+        record = job_queue.enqueue(
+            fn_name="scanner_batch_pipeline",
+            payload=payload.model_dump(mode="json"),
+            worker=_worker_async_scanner_batch,
+            idempotency_key=idempotency_key,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=str(exc)) from exc
     return JobStatusResponse(
         job_id=record.job_id,
         status=record.status,
@@ -176,6 +206,8 @@ def enqueue_scanner_batch_job(
         idempotency_key=record.idempotency_key,
         result=record.result,
         error=record.error,
+        created_at=record.created_at,
+        finished_at=record.finished_at,
     )
 
 
@@ -192,6 +224,8 @@ def get_job(job_id: str, _=Depends(permission_dependency("read"))) -> JobStatusR
         idempotency_key=record.idempotency_key,
         result=record.result,
         error=record.error,
+        created_at=record.created_at,
+        finished_at=record.finished_at,
     )
 
 

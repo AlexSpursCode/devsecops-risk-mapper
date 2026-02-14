@@ -21,11 +21,25 @@ def _resolve_role(x_role: str | None, authorization: str | None) -> Role:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="missing bearer token")
         token = authorization.split(" ", 1)[1].strip()
         try:
-            claims = jwt.decode(token, settings.auth_jwt_secret, algorithms=[settings.auth_jwt_algorithm])
+            claims = jwt.decode(
+                token,
+                settings.auth_jwt_secret,
+                algorithms=[settings.auth_jwt_algorithm],
+                audience=settings.auth_jwt_audience,
+                issuer=settings.auth_jwt_issuer,
+                options={"require": ["exp", "iat", "nbf", "iss", "aud", "role"]},
+                leeway=settings.auth_jwt_leeway_seconds,
+            )
             role_raw = claims.get("role")
             return Role(role_raw)
-        except Exception as exc:
+        except jwt.InvalidTokenError as exc:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token") from exc
+
+    if not settings.auth_allow_insecure_header:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="header auth disabled; use jwt or set AUTH_ALLOW_INSECURE_HEADER=true",
+        )
 
     role_text = x_role or "dev_lead"
     try:
