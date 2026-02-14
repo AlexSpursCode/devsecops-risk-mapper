@@ -1,6 +1,6 @@
-# DevSecOps Visual Risk Mapper
+# DevSecOps AI/LLM Application Risk Mapper
 
-Greenfield MVP implementation for a CI/CD-integrated DevSecOps risk mapper aligned to OWASP SAMM and CISA Secure by Design.
+Greenfield MVP implementation for a CI/CD-integrated DevSecOps risk mapper focused on evaluating AI/LLM-generated applications and services, including threat modeling, dataflow mapping, supply-chain risk, SBOM evidence, and compliance feedback aligned to OWASP SAMM and CISA Secure by Design.
 
 ## Implemented MVP Components
 
