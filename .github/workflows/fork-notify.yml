@@ -1,0 +1,42 @@
+name: Fork Notify
+
+on:
+  fork:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create issue for fork event
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const forkee = context.payload.forkee || {};
+            const actor = context.actor || 'unknown';
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            const title = `Fork detected: ${forkee.full_name || actor}`;
+            const body = [
+              'A new fork was created for this repository.',
+              '',
+              `- Fork owner: @${actor}`,
+              `- Fork repo: ${forkee.full_name || 'unknown'}`,
+              `- Fork URL: ${forkee.html_url || 'unknown'}`,
+              `- Visibility: ${forkee.private ? 'private' : 'public'}`,
+              `- Event time (UTC): ${new Date().toISOString()}`,
+              '',
+              '_Automated by `fork-notify.yml`._'
+            ].join('\n');
+
+            await github.rest.issues.create({
+              owner,
+              repo,
+              title,
+              body,
+              labels: ['fork-notification']
+            });
