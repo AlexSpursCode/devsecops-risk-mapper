@@ -2,6 +2,10 @@
 
 Greenfield MVP implementation for a CI/CD-integrated DevSecOps risk mapper focused on evaluating AI/LLM-generated applications and services, including threat modeling, dataflow mapping, supply-chain risk, SBOM evidence, and compliance feedback aligned to OWASP SAMM and CISA Secure by Design.
 
+## UI Preview
+
+![DevSecOps Risk Mapper Dashboard](platform/docs/images/risk-mapper-dashboard.png)
+
 ## Implemented MVP Components
 
 - FastAPI backend with ingest, risk, graph, compliance, and gate endpoints.
